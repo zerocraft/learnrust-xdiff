@@ -84,7 +84,7 @@ impl RequestProfile {
         if !headers.contains_key(header::CONTENT_TYPE) {
             headers.insert(
                 header::CONTENT_TYPE,
-                HeaderValue::from_static("application/json"),
+                HeaderValue::from_static(mime::APPLICATION_JSON.as_ref()),
             );
         }
 
@@ -109,25 +109,40 @@ impl RequestProfile {
             _ => Err(anyhow::anyhow!("unsupported")),
         }
     }
+
+    pub(crate) fn validate(&self) -> Result<()> {
+        if let Some(params) = self.params.as_ref() {
+            if !params.is_object() {
+                return Err(anyhow::anyhow!(
+                    "config params error\n {}",
+                    serde_yaml::to_string(params)?
+                ));
+            }
+        }
+        if let Some(body) = self.body.as_ref() {
+            if !body.is_object() {
+                return Err(anyhow::anyhow!(
+                    "config body error\n {}",
+                    serde_yaml::to_string(body)?
+                ));
+            }
+        }
+        Ok(())
+    }
 }
 
 fn get_content_type(headers: &HeaderMap) -> Option<String> {
     headers
         .get(header::CONTENT_TYPE)
-        .map(|v| v.to_str().unwrap().split(";").next())
-        .flatten()
-        .map(|v| v.to_string())
+        .and_then(|v| v.to_str().unwrap().split(";").next().map(|v| v.to_string()))
 }
 
 fn filter_json(text: &str, skip: &[String]) -> Result<String> {
     let mut json = serde_json::from_str(&text)?;
-    match json {
-        serde_json::Value::Object(ref mut obj) => {
-            for k in skip {
-                obj.remove(k);
-            }
+    if let serde_json::Value::Object(ref mut obj) = json {
+        for k in skip {
+            obj.remove(k);
         }
-        _ => {}
     }
     Ok(serde_json::to_string_pretty(&json)?)
 }

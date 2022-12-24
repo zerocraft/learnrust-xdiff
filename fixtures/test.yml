@@ -31,6 +31,11 @@ todo:
       - x-powered-by
       - x-ratelimit-limit
       - x-ratelimit-remaining
+      - x-ratelimit-reset
+      - x-content-type-options
+      - vary
+      - pragma
+      - expires
     skip_body:
       - userId
       - completed

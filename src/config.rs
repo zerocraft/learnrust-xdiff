@@ -1,4 +1,4 @@
-use anyhow::Ok;
+use anyhow::{Context, Ok};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, io::Write};
 use tokio::fs;
@@ -15,10 +15,15 @@ pub struct DiffConfig {
 pub struct DiffProfile {
     pub req1: RequestProfile,
     pub req2: RequestProfile,
+    #[serde(skip_serializing_if = "is_default", default)]
     pub response: ResponseProfile,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+fn is_default<T: Default + PartialEq>(v: &T) -> bool {
+    v == &T::default()
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
 pub struct ResponseProfile {
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub skip_headers: Vec<String>,
@@ -28,7 +33,18 @@ pub struct ResponseProfile {
 
 impl DiffConfig {
     pub fn from_yaml(content: &str) -> anyhow::Result<Self> {
-        Ok(serde_yaml::from_str(content)?)
+        let config: Self = serde_yaml::from_str(content)?;
+        config.validate()?;
+        Ok(config)
+    }
+
+    fn validate(&self) -> anyhow::Result<()> {
+        for (name, profile) in &self.profiles {
+            profile
+                .validate()
+                .context(format!("profile error [{}]", name.to_string()))?;
+        }
+        Ok(())
     }
 
     pub async fn load_yaml(path: &str) -> anyhow::Result<Self> {
@@ -44,7 +60,6 @@ impl DiffConfig {
 impl DiffProfile {
     pub async fn diff(&self, args: ExtraArgs) -> anyhow::Result<String> {
         let r1 = self.req1.send(&args).await?;
-        //println!("{:?}", r1);
         let r2 = self.req2.send(&args).await?;
 
         let t1 = r1.filter_text(&self.response).await?;
@@ -55,6 +70,7 @@ impl DiffProfile {
         let stdout = std::io::stdout();
         let mut stdout = stdout.lock();
         write!(stdout, "{}", output)?;
+
         //println!("{}", t1);
         //println!("{}", t2);
 
@@ -62,5 +78,11 @@ impl DiffProfile {
         //println!("{:?}", &self.response);
 
         Ok("".to_string())
+    }
+
+    fn validate(&self) -> anyhow::Result<()> {
+        _ = &self.req1.validate().context("req1 error")?;
+        _ = &self.req2.validate().context("req2 error")?;
+        Ok(())
     }
 }
