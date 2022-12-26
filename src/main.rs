@@ -1,6 +1,8 @@
 use anyhow::{Ok, Result};
 use clap::Parser;
-use rust_xdiff::{cli::*, DiffConfig, ExtraArgs};
+use dialoguer::{theme::ColorfulTheme, Input, MultiSelect};
+use rust_xdiff::{cli::*, DiffConfig, DiffProfile, ExtraArgs, RequestProfile, ResponseProfile};
+use std::io::Write;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -8,8 +10,45 @@ async fn main() -> Result<()> {
 
     match args.action {
         Action::Run(args) => run(args).await?,
+        Action::Parse => parse().await?,
         _ => panic!("Not implemented"),
     }
+    Ok(())
+}
+
+async fn parse() -> Result<()> {
+    let theme = ColorfulTheme::default();
+    let url1: String = Input::with_theme(&theme)
+        .with_prompt("Url1")
+        .interact_text()?;
+    let url2: String = Input::with_theme(&theme)
+        .with_prompt("Url2")
+        .interact_text()?;
+    let req1: RequestProfile = url1.parse()?;
+    let req2 = url2.parse()?;
+
+    let profile_name: String = Input::with_theme(&theme)
+        .with_prompt("Profile")
+        .interact_text()?;
+
+    let res1 = req1.send(&ExtraArgs::default()).await?;
+
+    let mut headers = res1.get_header_keys();
+    headers.sort();
+
+    let chosen = MultiSelect::with_theme(&theme)
+        .with_prompt("Skip Headers")
+        .items(&headers)
+        .interact()?;
+    let skip_headers = chosen.iter().map(|i| headers[*i].to_string()).collect();
+    let response = ResponseProfile::new(skip_headers, vec![]);
+    let profile = DiffProfile::new(req1, req2, response);
+    let config = DiffConfig::new(vec![(profile_name, profile)].into_iter().collect());
+    let result = serde_yaml::to_string(&config)?;
+
+    let stdout = std::io::stdout();
+    let mut stdout = stdout.lock();
+    write!(stdout, "---\n{}", result)?;
     Ok(())
 }
 

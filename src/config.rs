@@ -31,6 +31,15 @@ pub struct ResponseProfile {
     pub skip_body: Vec<String>,
 }
 
+impl ResponseProfile {
+    pub fn new(skip_headers: Vec<String>, skip_body: Vec<String>) -> Self {
+        Self {
+            skip_headers,
+            skip_body,
+        }
+    }
+}
+
 impl DiffConfig {
     pub fn from_yaml(content: &str) -> anyhow::Result<Self> {
         let config: Self = serde_yaml::from_str(content)?;
@@ -55,6 +64,10 @@ impl DiffConfig {
     pub fn get_profile(&self, name: &str) -> Option<&DiffProfile> {
         self.profiles.get(name)
     }
+
+    pub fn new(profiles: HashMap<String, DiffProfile>) -> Self {
+        Self { profiles }
+    }
 }
 
 impl DiffProfile {
@@ -78,6 +91,14 @@ impl DiffProfile {
         //println!("{:?}", &self.response);
 
         Ok("".to_string())
+    }
+
+    pub fn new(req1: RequestProfile, req2: RequestProfile, res: ResponseProfile) -> Self {
+        Self {
+            req1,
+            req2,
+            response: res,
+        }
     }
 
     fn validate(&self) -> anyhow::Result<()> {
