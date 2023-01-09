@@ -1,0 +1,13 @@
+---
+todoV1:
+  url: https://jsonplaceholder.typicode.com/todos/1
+  params:
+    a: 1
+    b: 2
+
+todoN:
+  url: https://jsonplaceholder.typicode.com/todos
+  method: POST
+  body:
+    title: "hello"
+    completed: false

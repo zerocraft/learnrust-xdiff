@@ -1,7 +1,7 @@
 use anyhow::*;
-use clap::{Parser, Subcommand};
 
 use crate::ExtraArgs;
+use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug, Clone)]
 #[clap(version,author,about,long_about=None)]
@@ -50,7 +50,7 @@ pub enum KeyValType {
     Body,
 }
 
-fn parse_key_val(s: &str) -> Result<KeyVal> {
+pub fn parse_key_val(s: &str) -> Result<KeyVal> {
     let mut parts = s.splitn(2, '=');
 
     // let retrieve = |v: Option<&str>, str: String| -> Result<&str> {

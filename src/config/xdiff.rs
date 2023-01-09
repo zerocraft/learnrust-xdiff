@@ -1,9 +1,8 @@
+use super::{is_default, LoadConfig, RequestProfile, ValidateConfig};
+use crate::{utils::diff_text, ExtraArgs};
 use anyhow::{Context, Ok};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, io::Write};
-use tokio::fs;
-
-use crate::{req::RequestProfile, utils::diff_text, ExtraArgs};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DiffConfig {
@@ -19,34 +18,9 @@ pub struct DiffProfile {
     pub response: ResponseProfile,
 }
 
-fn is_default<T: Default + PartialEq>(v: &T) -> bool {
-    v == &T::default()
-}
+impl LoadConfig for DiffConfig {}
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
-pub struct ResponseProfile {
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub skip_headers: Vec<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub skip_body: Vec<String>,
-}
-
-impl ResponseProfile {
-    pub fn new(skip_headers: Vec<String>, skip_body: Vec<String>) -> Self {
-        Self {
-            skip_headers,
-            skip_body,
-        }
-    }
-}
-
-impl DiffConfig {
-    pub fn from_yaml(content: &str) -> anyhow::Result<Self> {
-        let config: Self = serde_yaml::from_str(content)?;
-        config.validate()?;
-        Ok(config)
-    }
-
+impl ValidateConfig for DiffConfig {
     fn validate(&self) -> anyhow::Result<()> {
         for (name, profile) in &self.profiles {
             profile
@@ -55,12 +29,9 @@ impl DiffConfig {
         }
         Ok(())
     }
+}
 
-    pub async fn load_yaml(path: &str) -> anyhow::Result<Self> {
-        let content = fs::read_to_string(path).await?;
-        Self::from_yaml(&content)
-    }
-
+impl DiffConfig {
     pub fn get_profile(&self, name: &str) -> Option<&DiffProfile> {
         self.profiles.get(name)
     }
@@ -100,10 +71,29 @@ impl DiffProfile {
             response: res,
         }
     }
+}
 
+impl ValidateConfig for DiffProfile {
     fn validate(&self) -> anyhow::Result<()> {
         _ = &self.req1.validate().context("req1 error")?;
         _ = &self.req2.validate().context("req2 error")?;
         Ok(())
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
+pub struct ResponseProfile {
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub skip_headers: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub skip_body: Vec<String>,
+}
+
+impl ResponseProfile {
+    pub fn new(skip_headers: Vec<String>, skip_body: Vec<String>) -> Self {
+        Self {
+            skip_headers,
+            skip_body,
+        }
     }
 }

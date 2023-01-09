@@ -1,11 +1,14 @@
 use anyhow::{Ok, Result};
+
 use clap::Parser;
 use dialoguer::{theme::ColorfulTheme, Input, MultiSelect};
-use rust_xdiff::{cli::*, DiffConfig, DiffProfile, ExtraArgs, RequestProfile, ResponseProfile};
+use rust_xlearn::{
+    cli::*, DiffConfig, DiffProfile, ExtraArgs, LoadConfig, RequestProfile, ResponseProfile,
+};
 use std::io::Write;
 
 #[tokio::main]
-async fn main() -> Result<()> {
+pub async fn main() -> Result<()> {
     let args = Args::parse();
 
     match args.action {
@@ -48,12 +51,16 @@ async fn parse() -> Result<()> {
 
     let stdout = std::io::stdout();
     let mut stdout = stdout.lock();
-    write!(stdout, "---\n{}", result)?;
+    write!(
+        stdout,
+        "---\n{}",
+        rust_xlearn::highlight_text(&result, "yaml", None).unwrap()
+    )?;
     Ok(())
 }
 
 async fn run(args: RunArgs) -> Result<()> {
-    let config_file = args.config.unwrap_or_else(|| "./xdiff.yml".to_string());
+    let config_file = args.config.unwrap_or_else(|| "./dif.yml".to_string());
     let config = DiffConfig::load_yaml(&config_file).await?;
     let profile = config
         .get_profile(&args.profile)
