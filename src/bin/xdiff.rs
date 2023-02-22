@@ -3,7 +3,8 @@ use anyhow::{Ok, Result};
 use clap::Parser;
 use dialoguer::{theme::ColorfulTheme, Input, MultiSelect};
 use rust_xlearn::{
-    cli::*, DiffConfig, DiffProfile, ExtraArgs, LoadConfig, RequestProfile, ResponseProfile,
+    cli::*, process_error, DiffConfig, DiffProfile, ExtraArgs, LoadConfig, RequestProfile,
+    ResponseProfile,
 };
 use std::io::Write;
 
@@ -11,12 +12,13 @@ use std::io::Write;
 pub async fn main() -> Result<()> {
     let args = Args::parse();
 
-    match args.action {
-        Action::Run(args) => run(args).await?,
-        Action::Parse => parse().await?,
+    let result = match args.action {
+        Action::Run(args) => run(args).await,
+        Action::Parse => parse().await,
         _ => panic!("Not implemented"),
-    }
-    Ok(())
+    };
+
+    process_error(result)
 }
 
 async fn parse() -> Result<()> {
@@ -51,11 +53,15 @@ async fn parse() -> Result<()> {
 
     let stdout = std::io::stdout();
     let mut stdout = stdout.lock();
-    write!(
-        stdout,
-        "---\n{}",
-        rust_xlearn::highlight_text(&result, "yaml", None).unwrap()
-    )?;
+    if atty::is(atty::Stream::Stdout) {
+        write!(
+            stdout,
+            "---\n{}",
+            rust_xlearn::highlight_text(&result, "yaml", None).unwrap()
+        )?;
+    } else {
+        write!(stdout, "{}", &result)?;
+    }
     Ok(())
 }
 

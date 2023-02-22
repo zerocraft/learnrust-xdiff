@@ -1,8 +1,9 @@
-use std::fmt::{self, Write};
-
 use anyhow::{Ok, Result};
 use console::{style, Style};
 use similar::{ChangeTag, TextDiff};
+use std::fmt::Write as _;
+use std::fmt::{self};
+use std::io::Write as _;
 use syntect::{
     easy::HighlightLines,
     highlighting::ThemeSet,
@@ -81,4 +82,21 @@ pub fn highlight_text(text: &str, extension: &str, theme: Option<&str>) -> Resul
         write!(&mut output, "{}", escaped)?;
     }
     Ok(output)
+}
+
+pub fn process_error(result: Result<()>) -> Result<()> {
+    match result {
+        Err(e) => {
+            let stderr = std::io::stderr();
+            let mut stderr = stderr.lock();
+            if atty::is(atty::Stream::Stderr) {
+                let s = Style::new().red();
+                write!(stderr, "{}", s.apply_to(e))?;
+            } else {
+                write!(stderr, "{:?}", e)?;
+            }
+        }
+        _ => {} // Ok(_)
+    }
+    Ok(())
 }

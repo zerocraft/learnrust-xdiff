@@ -6,7 +6,7 @@ pub use config::{
     get_body_text, get_header_text, get_status_text, DiffConfig, DiffProfile, LoadConfig,
     ReqConfig, RequestProfile, ResponseProfile,
 };
-pub use utils::highlight_text;
+pub use utils::{highlight_text, process_error};
 
 #[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub struct ExtraArgs {

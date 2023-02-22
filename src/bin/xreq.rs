@@ -3,8 +3,8 @@ use clap::Parser;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::Input;
 use rust_xlearn::{
-    cli::*, get_body_text, get_header_text, get_status_text, highlight_text, ExtraArgs, LoadConfig,
-    ReqConfig,
+    cli::*, get_body_text, get_header_text, get_status_text, highlight_text, process_error,
+    ExtraArgs, LoadConfig, ReqConfig,
 };
 use std::fmt::Write as _;
 use std::io::Write as _;
@@ -13,12 +13,13 @@ use std::io::Write as _;
 pub async fn main() -> Result<()> {
     let args = Args::parse();
 
-    match args.action {
-        Action::Run(args) => run(args).await?,
-        Action::Parse => parse().await?,
+    let result = match args.action {
+        Action::Run(args) => run(args).await,
+        Action::Parse => parse().await,
         _ => panic!("Not implemented"),
-    }
-    Ok(())
+    };
+
+    process_error(result)
 }
 
 async fn parse() -> Result<()> {
@@ -37,11 +38,15 @@ async fn parse() -> Result<()> {
 
     let stdout = std::io::stdout();
     let mut stdout = stdout.lock();
-    write!(
-        stdout,
-        "---\n{}",
-        rust_xlearn::highlight_text(&result, "yaml", None).unwrap()
-    )?;
+    if atty::is(atty::Stream::Stdout) {
+        write!(
+            stdout,
+            "---\n{}",
+            rust_xlearn::highlight_text(&result, "yaml", None).unwrap()
+        )?;
+    } else {
+        write!(stdout, "{}", &result)?;
+    }
     Ok(())
 }
 
@@ -60,26 +65,31 @@ async fn run(args: RunArgs) -> Result<()> {
     let body = get_body_text(res, &[]).await?;
 
     let mut output = String::new();
-    write!(
-        &mut output,
-        "{}\n",
-        highlight_text(&format!("Url: {}\n", url), "yaml", None)?
-    )?;
-    write!(
-        &mut output,
-        "{}\n",
-        highlight_text(
-            &format!("Result: {}", status),
-            "yaml",
-            Some("Solarized (dark)")
-        )?
-    )?;
-    write!(
-        &mut output,
-        "{}\n",
-        highlight_text(&headers, "yaml", Some("InspiredGitHub"))?
-    )?;
-    write!(&mut output, "{}", highlight_text(&body, "json", None)?)?;
+
+    if atty::is(atty::Stream::Stdout) {
+        write!(
+            &mut output,
+            "{}\n",
+            highlight_text(&format!("Url: {}\n", url), "yaml", None)?
+        )?;
+        write!(
+            &mut output,
+            "{}\n",
+            highlight_text(
+                &format!("Result: {}", status),
+                "yaml",
+                Some("Solarized (dark)")
+            )?
+        )?;
+        write!(
+            &mut output,
+            "{}\n",
+            highlight_text(&headers, "yaml", Some("InspiredGitHub"))?
+        )?;
+        write!(&mut output, "{}", highlight_text(&body, "json", None)?)?;
+    } else {
+        write!(&mut output, "{}", &body)?;
+    }
 
     let stdout = std::io::stdout();
     let mut stdout = stdout.lock();
