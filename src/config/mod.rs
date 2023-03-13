@@ -278,9 +278,53 @@ fn empty_json_value(v: &Option<serde_json::Value>) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use mockito::{mock, Mock};
+    use reqwest::StatusCode;
+    use serde_json::json;
+
+    use super::*;
 
     #[test]
     fn t1() {
         assert_eq!("application/json", mime::APPLICATION_JSON);
+    }
+
+    #[test]
+    fn t2() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("application/json; charset=utf-8"),
+        );
+        assert_eq!(
+            get_content_type(&headers),
+            Some("application/json".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn t3() {
+        let body = json!({"id":1,"title":"go"});
+        let path = "/todo?a=1&b=2";
+        mock_server(path, &body);
+        let url = format!("{}{}", mockito::server_url(), path); //Url::parse("https://httpbin.org/get").unwrap();
+        println!("{}", url);
+        let url = Url::parse(&url).unwrap();
+        let profile = RequestProfile::new(Method::GET, url, None, HeaderMap::new(), Some(body));
+        let res = profile
+            .send(&Default::default())
+            .await
+            .unwrap()
+            .into_inner();
+        assert_eq!(res.status(), StatusCode::OK);
+    }
+
+    fn mock_server(path: &str, body: &serde_json::Value) {
+        let _m = mock("GET", path)
+            .with_status(200)
+            .with_header("content-type", "text/plain")
+            .with_header("x-api-key", "666")
+            .with_body(serde_json::to_string(&body).unwrap())
+            .create();
     }
 }
