@@ -100,3 +100,35 @@ pub fn process_error(result: Result<()>) -> Result<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn t1() {
+        let text1 = "foo\nbar";
+        let text2 = "foo\nbaz";
+        let diff = diff_text(text1, text2).unwrap();
+        let expected = include_str!("../fixtures/diff_test_txt1.txt");
+        println!("{}", diff);
+        println!("{}", expected);
+        assert_eq!(diff, expected);
+    }
+
+    #[test]
+    fn t2() {
+        let jsonv = json!({
+            "foo": "bar",
+            "baz":"qux"
+        });
+        let mut text = serde_json::to_string_pretty(&jsonv).unwrap();
+        text = highlight_text(&text, "json", None).unwrap();
+        let expected = include_str!("../fixtures/diff_test_txt2.txt");
+        println!("{}", text);
+        println!("{}", expected);
+        assert_eq!(text, expected);
+    }
+}

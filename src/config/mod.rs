@@ -278,7 +278,7 @@ fn empty_json_value(v: &Option<serde_json::Value>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use mockito::{mock, Mock};
+    use mockito::mock;
     use reqwest::StatusCode;
     use serde_json::json;
 

@@ -103,3 +103,12 @@ impl From<Vec<KeyVal>> for ExtraArgs {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn t1() {
+        trycmd::TestCases::new().case("fixtures/cmd_test.md");
+    }
+}
